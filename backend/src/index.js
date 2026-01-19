@@ -5,6 +5,7 @@ import path from 'path';
 import morgan from 'morgan';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import UserRouter from './routes/user.js'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,7 +48,11 @@ app.get('/health',(req,res)=>{
   res.status(200).json({
     message:"Server Running Good"
   })
-})
+});
+
+
+app.use('/api/v1',UserRouter);
+
 
 
 
