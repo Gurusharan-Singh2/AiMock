@@ -3,7 +3,7 @@ import swaggerAutogen from 'swagger-autogen';
 
 const doc = {
   info: {
-    title: 'RoomSathi API',
+    title: 'Ai Mock Interview API',
     description: 'API Documentation',
   },
   host: `localhost:8082`, 
