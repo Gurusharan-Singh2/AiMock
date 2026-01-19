@@ -6,7 +6,8 @@
   "scripts": {
     "dev:backend": "cd backend && node --env-file=.env --watch index.js",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+   "install": "cd backend && npm install && cd ../frontend && npm install"
   },
   "keywords": [],
   "author": "",
