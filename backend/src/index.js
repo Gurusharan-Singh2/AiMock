@@ -1,0 +1,61 @@
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import path from 'path';
+import morgan from 'morgan';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
+// all swagger
+const swaggerPath = path.join(__dirname, '../swagger-output.json');
+let swaggerDocument = {};
+if (fs.existsSync(swaggerPath)) {
+  swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, 'utf-8'));
+  console.log('✅ Swagger file loaded');
+} else {
+  console.warn('⚠️ swagger-output.json not found, Swagger docs will be empty');
+}
+
+
+const app=express();
+const Port=process.env.PORT || 8080;
+
+
+// all  middlewares
+app.use(morgan('dev'));
+app.use(
+  cors({
+    origin: true,   
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+
+
+
+// all routes
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get('/health',(req,res)=>{
+  res.status(200).json({
+    message:"Server Running Good"
+  })
+})
+
+
+
+app.listen(Port,()=>{
+  console.log(`Backend Server Started at http://localhost:${Port}/health ||  http://localhost:8082/docs/ 
+    `);
+  
+})
+
+
+
