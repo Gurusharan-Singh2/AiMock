@@ -22,7 +22,7 @@ if (fs.existsSync(swaggerPath)) {
 
 
 const app=express();
-const Port=process.env.PORT || 8080;
+const Port=process.env.PORT;
 
 
 // all  middlewares
