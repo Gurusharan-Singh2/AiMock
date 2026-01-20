@@ -46,7 +46,7 @@ export const trackOtpRequests = async (identifier) => {
 
     return {
       success: false,
-      status: 429,
+      status: 400,
       message: "Too many OTP requests. Please wait 1 hour before trying again.",
     };
   }
