@@ -6,14 +6,13 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.js",
-    "docs": "node swagger.js"
+    "docs": "node swagger.js",
+    "start": "node src/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.2.0",
-    "@prisma/client": "^7.2.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -27,7 +26,6 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9",
-    "prisma": "^7.2.0"
+    "@types/node": "^25.0.9"
   }
 }
