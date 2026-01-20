@@ -1,5 +1,8 @@
 import { checkOtpRestrictions, sendOtpByEmail, trackOtpRequests } from '../utils/authHelper.js';
 import db from '../config/db.js'
+import redis from '../config/redis.js';
+import bcrypt from 'bcrypt';
+import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 
   export const registerUser = async (req, res) => {
   try {
@@ -23,5 +26,51 @@ import db from '../config/db.js'
     res.status(200).json({ message: "OTP sent successfully to email." });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  } finally{
+  await db.destroy();
   }
 }
+
+export const signupVerifyOtp= async (req, res) => {
+  try {
+    const { name, email, password, otp } = req.body;
+
+    if (!otp) return res.status(400).json({ message: "OTP is required" });
+
+    const savedOtp = await redis.get(`otp:${email}`);
+    if (!savedOtp) return res.status(400).json({ message: "OTP expired or not found" });
+
+    if (savedOtp !== otp) return res.status(400).json({ message: "Invalid OTP" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+   
+
+ 
+const result = await db('users').insert({
+  name,
+  email,
+  password: hashedPassword,
+});
+
+const userId = result[0]; 
+
+
+const user = await db('users')
+  .where({ id: userId })
+  .first(['name', 'email']);
+
+
+    await redis.del(`otp:${email}`);
+
+    generateTokenAndSetCookie(res, { id: user.id, email: user.email });
+
+
+    res.status(201).json({ message: "Signup successful", user});
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+  finally{
+   await db.destroy();
+  }
+};

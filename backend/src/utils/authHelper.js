@@ -50,7 +50,7 @@ export const trackOtpRequests = async (identifier) => {
   const currentCount = parseInt((await redis.get(otpRequestKey)) || "0");
 
   if (currentCount >= 2) {
-    await redis.set(spamLockKey, "locked", "EX", 600); // Lock for 1 hour
+    await redis.set(spamLockKey, "locked", "EX", 600); 
     throw new Error(`Too many OTP requests for this ${"email"}. Please wait 1 hour before trying again.`);
   }
 
