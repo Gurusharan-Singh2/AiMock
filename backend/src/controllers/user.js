@@ -36,6 +36,39 @@ export const registerUser = async (req, res) => {
   }
 };
 
+export const resendSignupOtp = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+   
+    const existingUser = await db("users")
+      .where({ email })
+      .first();
+
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    
+    await checkOtpRestrictions(email);
+    await trackOtpRequests(email);
+
+    
+    await sendOtpByEmail(name || "User", email);
+
+    res.status(200).json({ message: "OTP resent successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  } finally {
+    await db.destroy();
+  }
+};
+
+
 export const signupVerifyOtp = async (req, res) => {
   try {
     const { name, email, password, otp } = req.body;
