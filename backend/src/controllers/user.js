@@ -151,3 +151,136 @@ export const loginWithPassword = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+
+export const forgotPasswordSendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await db("users").where({ email }).first();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const restriction = await checkOtpRestrictions(email);
+    if (!restriction.success) {
+      return res.status(restriction.status).json({ message: restriction.message });
+    }
+
+    const tracking = await trackOtpRequests(email);
+    if (!tracking.success) {
+      return res.status(tracking.status).json({ message: tracking.message });
+    }
+
+    const otpResult = await sendOtpByEmail(user.name, email);
+    if (!otpResult.success) {
+      return res.status(otpResult.status).json({ message: otpResult.message });
+    }
+
+    res.status(200).json({ message: "OTP sent for password reset" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await db("users").where({ email }).first();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const restriction = await checkOtpRestrictions(email);
+    if (!restriction.success) {
+      return res.status(restriction.status).json({ message: restriction.message });
+    }
+
+    const tracking = await trackOtpRequests(email);
+    if (!tracking.success) {
+      return res.status(tracking.status).json({ message: tracking.message });
+    }
+
+    const otpResult = await sendOtpByEmail(user.name, email);
+    if (!otpResult.success) {
+      return res.status(otpResult.status).json({ message: otpResult.message });
+    }
+
+    res.status(200).json({ message: "OTP resent successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const savedOtp = await redis.get(`otp:${email}`);
+    if (!savedOtp) {
+      return res.status(400).json({ message: "OTP expired or not found" });
+    }
+
+    if (savedOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    
+    await redis.setex(`reset_verified:${email}`, 300, "true"); 
+
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Email and new password are required" });
+    }
+
+    const isVerified = await redis.get(`reset_verified:${email}`);
+    if (!isVerified) {
+      return res.status(403).json({ message: "OTP verification required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db("users")
+      .where({ email })
+      .update({ password: hashedPassword });
+
+    
+    await redis.del(`otp:${email}`);
+    await redis.del(`reset_verified:${email}`);
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
