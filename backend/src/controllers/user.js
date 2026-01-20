@@ -76,37 +76,43 @@ export const signupVerifyOtp = async (req, res) => {
 };
 
 
-export const loginWithPassword = async (req, res, next) => {
-  
-  const { email, password } = req.body;
+export const loginWithPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return next(new ErrorHandler("Email and password are required", 400));
-  }
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
-  const user = await db('users')
-  if (!user) {
-    return next(new ErrorHandler("User not found", 404));
-  }
+    const user = await db("users")
+      .where({ email })
+      .first();
 
-  
-  const isMatch = await comparePassword(password, user.password);
-  if (!isMatch) {
-    return next(new ErrorHandler("Incorrect password", 401));
-  }
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  const token = generateToken({ id: user._id, email: user.email, name: user.username });
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
 
-  res.status(200).json({
-    success: true,
-    message: "Login successful",
-    token,
-    userInfo: {
-      _id: user._id,
-      username: user.username,
+    generateTokenAndSetCookie(res, {
+      id: user.id,
       email: user.email,
-      role: user.role,
-      image: user.image,
-    },
-  });
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  } finally {
+    await db.destroy();
+  }
 };

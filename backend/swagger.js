@@ -6,7 +6,7 @@ const doc = {
     title: 'Ai Mock Interview API',
     description: 'API Documentation',
   },
-  host: `localhost:8082`, 
+  host: `aimock-dbcq.onrender.com`, 
 };
 
 const outputFile = './swagger-output.json';
