@@ -8,7 +8,7 @@
   "host": "aimock-dbcq.onrender.com",
   "basePath": "/",
   "schemes": [
-    "http"
+    "https"
   ],
   "paths": {
     "/health": {
@@ -323,9 +323,6 @@
             "schema": {
               "type": "object",
               "properties": {
-                "img": {
-                  "example": "any"
-                },
                 "college_name": {
                   "example": "any"
                 },
@@ -345,6 +342,9 @@
           },
           "400": {
             "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
           },
           "500": {
             "description": "Internal Server Error"
