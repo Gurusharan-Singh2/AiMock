@@ -15,11 +15,14 @@ export const generateInterview = async (req, res) => {
       numberOfQuestions = 5
     } = req.body;
 
+
     if (!jobRole || !techStack || !yearsOfExperience) {
       return res.status(400).json({
         message: "jobRole, techStack, and yearsOfExperience are required"
       });
     }
+     
+
 
   
     const aiResult = await generateInterviewQuestions({

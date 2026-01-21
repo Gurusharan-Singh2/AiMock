@@ -7,6 +7,7 @@ import db from "../config/db.js";
 import redis from "../config/redis.js";
 import bcrypt from "bcrypt";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
+import { uploadToTebi } from "../libs/s3.js";
 
 
 export const registerUser = async (req, res) => {
@@ -286,15 +287,23 @@ export const resetPassword = async (req, res) => {
 
 export const onboarding = async (req, res) => {
   try {
-    const { img, college_name, year_passing, linkedin_url } = req.body;
-    const userId = 1
+    const { college_name, year_passing, linkedin_url } = req.body;
+    // const userId = 1;
+    const userId = req.user.id;
 
-    if (!img || !college_name || !year_passing || !linkedin_url) {
+    if (!college_name || !year_passing || !linkedin_url) {
       return res.status(400).json({ message: "Fill All required fields" });
     }
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    
+    const file = req.file;
+    const fileUrl = await uploadToTebi(file.buffer, file.originalname, file.mimetype);
 
     const onboarding = await db("onboarding").insert({
-      img,
+      img:fileUrl,
       college_name,
       year_passing,
       linkedin_url,
