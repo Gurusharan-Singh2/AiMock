@@ -242,8 +242,8 @@ export const verifyForgotPasswordOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    
-    await redis.setex(`reset_verified:${email}`, 300, "true"); 
+
+    await redis.setex(`reset_verified:${email}`, 300, "true");
 
     res.status(200).json({ message: "OTP verified successfully" });
   } catch (error) {
@@ -272,7 +272,7 @@ export const resetPassword = async (req, res) => {
       .where({ email })
       .update({ password: hashedPassword });
 
-    
+
     await redis.del(`otp:${email}`);
     await redis.del(`reset_verified:${email}`);
 
@@ -284,3 +284,39 @@ export const resetPassword = async (req, res) => {
 };
 
 
+export const onboarding = async (req, res) => {
+  try {
+    const { img, college_name, year_passing, linkedin_url } = req.body;
+    const userId = 1
+
+    if (!img || !college_name || !year_passing || !linkedin_url) {
+      return res.status(400).json({ message: "Fill All required fields" });
+    }
+
+    const onboarding = await db("onboarding").insert({
+      img,
+      college_name,
+      year_passing,
+      linkedin_url,
+      user_id: userId,
+    });
+
+    let updatedRows;
+    if (onboarding) {
+       updatedRows = await db("users")
+        .where({ id: userId })
+        .update({
+          isBoarding: true
+        });
+    }
+
+    if(!updatedRows){
+       res.status(400).json({message:"Please try again for updating details"})
+    }
+    res.status(200).json({success:true ,message:"Onboarding Successfully" })
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}

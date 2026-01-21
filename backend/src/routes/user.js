@@ -1,5 +1,5 @@
 import express from 'express'
-import { forgotPasswordSendOtp, loginWithPassword, registerUser, resendForgotPasswordOtp, resendSignupOtp, resetPassword, signupVerifyOtp, verifyForgotPasswordOtp } from '../controllers/user.js';
+import { forgotPasswordSendOtp, loginWithPassword, onboarding, registerUser, resendForgotPasswordOtp, resendSignupOtp, resetPassword, signupVerifyOtp, verifyForgotPasswordOtp } from '../controllers/user.js';
 
 const router=express.Router();
 
@@ -12,6 +12,8 @@ router.post("/forgot-password", forgotPasswordSendOtp);
 router.post("/forgot-password/resend", resendForgotPasswordOtp);
 router.post("/forgot-password/verify-otp", verifyForgotPasswordOtp);
 router.post("/forgot-password/reset", resetPassword);
+
+router.post("/onboarding" ,onboarding);
 
 
 
