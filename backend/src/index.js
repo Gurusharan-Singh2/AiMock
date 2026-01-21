@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import UserRouter from './routes/user.js'
+import InterviewRouter from './routes/interview.js'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,7 @@ app.get('/health',(req,res)=>{
 
 
 app.use('/api/v1',UserRouter);
+app.use('/api/v1/interview',InterviewRouter);
 app.post("/logout", (req, res) => {
   res.clearCookie("token", { httpOnly: true, sameSite: "strict" });
   res.json({ message: "Logged out successfully" });
