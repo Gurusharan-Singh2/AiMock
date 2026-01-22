@@ -1,5 +1,5 @@
 import express from 'express'
-import { forgotPasswordSendOtp, loginWithPassword, onboarding, registerUser, resendForgotPasswordOtp, resendSignupOtp, resetPassword, signupVerifyOtp, verifyForgotPasswordOtp } from '../controllers/user.js';
+import { forgotPasswordSendOtp, getUserProfile, loginWithPassword, onboarding, registerUser, resendForgotPasswordOtp, resendSignupOtp, resetPassword, signupVerifyOtp, verifyForgotPasswordOtp } from '../controllers/user.js';
 import { authMiddleware } from '../middleware/index.js';
 import { upload } from '../libs/s3.js';
 
@@ -17,6 +17,7 @@ router.post("/forgot-password/reset", resetPassword);
 
 // router.post("/onboarding" ,onboarding);
 router.post("/onboarding",authMiddleware,upload.single("img"),onboarding);
+router.get("/profile",authMiddleware,getUserProfile)
 // router.post("/onboarding",upload.single("img"),onboarding);
 
 

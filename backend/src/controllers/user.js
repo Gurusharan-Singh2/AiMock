@@ -109,7 +109,7 @@ export const signupVerifyOtp = async (req, res) => {
 
     const user = await db("users")
       .where({ id: userId })
-      .first(["id", "name", "email"]);
+      .first(["id", "name", "email","isBoarding"]);
 
     await redis.del(`otp:${email}`);
 
@@ -145,7 +145,7 @@ export const loginWithPassword = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email,isBoarding:user.isBoarding },
     });
   } catch (error) {
     console.error(error);
@@ -168,6 +168,9 @@ export const forgotPasswordSendOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+
+    
+
     const restriction = await checkOtpRestrictions(email);
     if (!restriction.success) {
       return res.status(restriction.status).json({ message: restriction.message });
@@ -182,8 +185,10 @@ export const forgotPasswordSendOtp = async (req, res) => {
     if (!otpResult.success) {
       return res.status(otpResult.status).json({ message: otpResult.message });
     }
+     
 
     res.status(200).json({ message: "OTP sent for password reset" });
+  
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
@@ -285,47 +290,103 @@ export const resetPassword = async (req, res) => {
 };
 
 
+
+
+
 export const onboarding = async (req, res) => {
   try {
     const { college_name, year_passing, linkedin_url } = req.body;
-    // const userId = 1;
+    // const userId = 17;
     const userId = req.user.id;
 
     if (!college_name || !year_passing || !linkedin_url) {
       return res.status(400).json({ message: "Fill All required fields" });
     }
+
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    
     const file = req.file;
-    const fileUrl = await uploadToTebi(file.buffer, file.originalname, file.mimetype);
+    const fileUrl = await uploadToTebi(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
 
     const onboarding = await db("onboarding").insert({
-      img:fileUrl,
+      img: fileUrl,
       college_name,
       year_passing,
       linkedin_url,
       user_id: userId,
     });
 
-    let updatedRows;
-    if (onboarding) {
-       updatedRows = await db("users")
-        .where({ id: userId })
-        .update({
-          isBoarding: true
-        });
+    if (!onboarding) {
+      return res.status(400).json({
+        message: "Onboarding failed, please try again",
+      });
     }
 
-    if(!updatedRows){
-       res.status(400).json({message:"Please try again for updating details"})
+    await db("users")
+      .where({ id: userId })
+      .update({ isBoarding: true });
+
+    // ✅ fetch updated user
+    const user = await db("users")
+      .select("id", "name", "email", "isBoarding")
+      .where({ id: userId })
+      .first();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({success:true ,message:"Onboarding Successfully" })
+
+    return res.status(200).json({
+      success: true,
+      message: "Onboarding Successfully",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isBoarding: user.isBoarding,
+      },
+    });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
+
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await db("users")
+      .select("id", "name", "email", "isBoarding", "created_at")
+      .where({ id: userId })
+      .first();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isBoarding: user.isBoarding,
+        created_at: user.created_at,
+      },
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
