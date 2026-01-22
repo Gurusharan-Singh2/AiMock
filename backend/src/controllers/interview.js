@@ -122,6 +122,9 @@ export const getInterviewQuestions = async (req, res) => {
 export const getUserInterviews = async (req, res) => {
   try {
  const userId = req.user.id;
+
+ console.log(userId);
+ 
     // const userId = 1;
     const interviews = await db("mock_interviews")
       .where({ user_id: userId })
