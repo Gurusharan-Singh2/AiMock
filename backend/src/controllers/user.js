@@ -362,12 +362,25 @@ export const onboarding = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // const userId = req.user.id;
+    const userId = 17;
 
-    const user = await db("users")
-      .select("id", "name", "email", "isBoarding", "created_at")
-      .where({ id: userId })
-      .first();
+    const user = await db("users as u")
+      .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
+      .select(
+        "u.id",
+        "u.name",
+        "u.email",
+        "u.isBoarding",
+        "u.created_at",
+        "o.img",
+        "o.college_name",
+        "o.year_passing",
+        "o.linkedin_url",
+        "o.created_at as onboarding_created_at"
+      )
+      .where("u.id", userId)
+      .first(); 
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -375,13 +388,7 @@ export const getUserProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isBoarding: user.isBoarding,
-        created_at: user.created_at,
-      },
+      user,
     });
 
   } catch (error) {
@@ -389,4 +396,5 @@ export const getUserProfile = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 

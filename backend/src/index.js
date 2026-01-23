@@ -54,7 +54,7 @@ app.get('/health',(req,res)=>{
 
 app.use('/api/v1',UserRouter);
 app.use('/api/v1/interview',InterviewRouter);
-app.post("/logout", (req, res) => {
+app.post("/api/v1/logout", (req, res) => {
   res.clearCookie("token", { httpOnly: true, sameSite: "strict" });
   res.json({ message: "Logged out successfully" });
 });

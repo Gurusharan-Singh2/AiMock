@@ -118,6 +118,53 @@ export const getInterviewQuestions = async (req, res) => {
   }
 };
 
+export const getInterviewDetail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // const userId = 17;
+    const { interviewId } = req.params;
+
+    if (!interviewId) {
+      return res.status(400).json({
+        message: "Interview ID is required"
+      });
+    }
+
+    const interview = await db("mock_interviews")
+      .where({ id: interviewId, user_id: userId })
+      .first();
+
+    if (!interview) {
+      return res.status(404).json({
+        message: "Interview not found"
+      });
+    }
+
+    const [{ count }] = await db("interview_questions")
+      .where({ interview_id: interviewId })
+      .count("id as count");
+
+    res.status(200).json({
+      message: "Interview details fetched successfully",
+      interview: {
+        id: interview.id,
+        jobRole: interview.job_role,
+        experienceLevel: interview.experience_level,
+        techStack: JSON.parse(interview.tech_stack),
+        totalQuestions: Number(count),
+        createdAt: interview.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error("Fetch Interview Detail Error:", error);
+    res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+};
+
+
 
 export const getUserInterviews = async (req, res) => {
   try {

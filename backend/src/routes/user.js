@@ -18,6 +18,7 @@ router.post("/forgot-password/reset", resetPassword);
 // router.post("/onboarding" ,onboarding);
 router.post("/onboarding",authMiddleware,upload.single("img"),onboarding);
 router.get("/profile",authMiddleware,getUserProfile)
+// router.get("/profile",getUserProfile)
 // router.post("/onboarding",upload.single("img"),onboarding);
 
 
