@@ -6,7 +6,6 @@ const groq = new Groq({
 
 function cleanJsonResponse(text) {
   if (!text) return "";
-
   return text
     .replace(/```json/gi, "")
     .replace(/```/g, "")
@@ -27,38 +26,25 @@ export async function generateInterviewQuestions({
         content: `
 You are a professional technical interviewer.
 
-Your task is to generate mock interview questions.
-
 STRICT RULES:
 - Output MUST be valid raw JSON
-- DO NOT wrap the response in markdown or code blocks
-- DO NOT include explanations, comments, or extra text
 - Return ONLY JSON
+- No markdown or extra text
 
 QUESTION GUIDELINES:
-- Adjust difficulty based on years of experience:
+- Adjust difficulty by years of experience:
   • 0–2 years → Junior
   • 3–5 years → Mid-level
   • 6+ years → Senior
-- Include a mix of:
-  • Technical questions
-  • Scenario-based questions
-  • Behavioral questions
-  • System design questions (ONLY for 6+ years experience)
-- Questions must be realistic and interview-ready
+- Include technical, scenario-based, behavioral, and system design questions (6+ years)
+- Must be realistic and interview-ready
 
 Current Date: ${new Date().toUTCString()}
         `
       },
       {
         role: "user",
-        content: JSON.stringify({
-          jobRole,
-          jobDescription,
-          techStack,
-          yearsOfExperience,
-          numberOfQuestions
-        })
+        content: JSON.stringify({ jobRole, jobDescription, techStack, yearsOfExperience, numberOfQuestions })
       }
     ];
 
@@ -69,19 +55,21 @@ Current Date: ${new Date().toUTCString()}
     });
 
     const rawContent = response.choices?.[0]?.message?.content;
-
-    if (!rawContent) {
-      throw new Error("Empty response from AI");
-    }
+    if (!rawContent) throw new Error("Empty AI response");
 
     const cleanedContent = cleanJsonResponse(rawContent);
 
     let parsedResult;
     try {
       parsedResult = JSON.parse(cleanedContent);
-    } catch (parseError) {
+    } catch (e) {
       console.error("❌ AI returned invalid JSON:\n", cleanedContent);
       throw new Error("Failed to parse AI JSON response");
+    }
+
+    // Optional validation
+    if (!Array.isArray(parsedResult.questions)) {
+      throw new Error("AI JSON does not contain 'questions' array");
     }
 
     return parsedResult;
@@ -92,6 +80,8 @@ Current Date: ${new Date().toUTCString()}
   }
 }
 
+
+// utils/interviewFeedback.js
 export async function generateInterviewFeedback({
   jobRole,
   questionsAndAnswers,
@@ -104,33 +94,38 @@ export async function generateInterviewFeedback({
         content: `
 You are an experienced technical interviewer and career coach.
 
-Your task is to review candidate answers and provide structured feedback.
-
 STRICT RULES:
 - Output MUST be valid raw JSON
-- DO NOT wrap the response in markdown or code blocks
-- DO NOT include explanations or extra text
 - Return ONLY JSON
+- No markdown or extra text
 
 FEEDBACK GUIDELINES:
-- Provide:
-  • feedback: Constructive, actionable feedback on the answer
-  • score: 1-5 (1 = poor, 5 = excellent)
-- Adjust feedback depth based on years of experience:
-  • 0–2 years → focus on learning, basics
-  • 3–5 years → include practical insights and improvement areas
-  • 6+ years → include advanced considerations and system-level advice
+- Provide per-question feedback, score (1–5), and the ideal/correct answer
+- Adjust depth by experience:
+  • 0–2 years → focus on basics
+  • 3–5 years → practical insights
+  • 6+ years → advanced/system-level advice
+
+FEW-SHOT EXAMPLES:
+{
+  "overallScore": 4,
+  "feedback": [
+    {
+      "questionId": 1,
+      "answer": "I used a for loop to iterate over array elements.",
+      "correctAnswer": "Using array.map is more concise and idiomatic.",
+      "feedback": "Good basic approach, but could use array methods for cleaner code.",
+      "score": 4
+    }
+  ]
+}
 
 Current Date: ${new Date().toUTCString()}
         `
       },
       {
         role: "user",
-        content: JSON.stringify({
-          jobRole,
-          yearsOfExperience,
-          questionsAndAnswers
-        })
+        content: JSON.stringify({ jobRole, yearsOfExperience, questionsAndAnswers })
       }
     ];
 
@@ -141,20 +136,38 @@ Current Date: ${new Date().toUTCString()}
     });
 
     const rawContent = response.choices?.[0]?.message?.content;
-
-    if (!rawContent) {
-      throw new Error("Empty response from AI");
-    }
+    if (!rawContent) throw new Error("Empty AI response");
 
     const cleanedContent = cleanJsonResponse(rawContent);
 
     let parsedResult;
     try {
       parsedResult = JSON.parse(cleanedContent);
-    } catch (parseError) {
+    } catch (e) {
       console.error("❌ AI returned invalid JSON:\n", cleanedContent);
       throw new Error("Failed to parse AI JSON response");
     }
+
+    if (!Array.isArray(parsedResult.feedback) || typeof parsedResult.overallScore !== "number") {
+      throw new Error("AI JSON feedback missing required fields");
+    }
+
+    const scaleScore = (score1to5) =>
+      Math.round((Math.min(Math.max(score1to5 || 1, 1), 5) * 10) / 5);
+
+    // Map AI feedback to include user's original answer
+    parsedResult.feedback = parsedResult.feedback.map(f => {
+      const userAns = questionsAndAnswers.find(q => q.questionId === f.questionId)?.answer || "";
+      return {
+        questionId: f.questionId,
+        userAnswer: userAns,
+        correctAnswer: f.correctAnswer || "",
+        feedback: f.feedback,
+        score: scaleScore(f.score)
+      };
+    });
+
+    parsedResult.overallScore = scaleScore(parsedResult.overallScore);
 
     return parsedResult;
 
@@ -163,14 +176,4 @@ Current Date: ${new Date().toUTCString()}
     throw error;
   }
 }
-
-
-
-
-
-
-
-
-
-
 

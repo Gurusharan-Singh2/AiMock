@@ -348,10 +348,7 @@ export const onboarding = async (req, res) => {
       .where({ id: userId })
       .update({ isBoarding: true });
 
-    // const user = await db("users")
-    //   .select("id", "name", "email", "isBoarding")
-    //   .where({ id: userId })
-    //   .first();
+   
 
      const user = await db("users as u")
       .leftJoin("onboarding as o", "u.id", "=", "o.user_id")

@@ -11,9 +11,6 @@ import {authMiddleware} from "../middleware/index.js";
 
 const router = express.Router();
 
-// router.post("/generate",  generateInterview);
-// router.get("/:interviewId",  getInterviewQuestions);
-// router.get("/",  getUserInterviews);
 
 
 router.post("/generate", authMiddleware, generateInterview);
