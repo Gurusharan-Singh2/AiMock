@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.js",
+    "a": "node --watch --env-file=.env src/aiagents/QuestionAgent.js",
     "docs": "node swagger.js",
     "start": "node src/index.js"
   },

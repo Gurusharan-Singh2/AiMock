@@ -92,6 +92,84 @@ Current Date: ${new Date().toUTCString()}
   }
 }
 
+export async function generateInterviewFeedback({
+  jobRole,
+  questionsAndAnswers,
+  yearsOfExperience
+}) {
+  try {
+    const messages = [
+      {
+        role: "system",
+        content: `
+You are an experienced technical interviewer and career coach.
+
+Your task is to review candidate answers and provide structured feedback.
+
+STRICT RULES:
+- Output MUST be valid raw JSON
+- DO NOT wrap the response in markdown or code blocks
+- DO NOT include explanations or extra text
+- Return ONLY JSON
+
+FEEDBACK GUIDELINES:
+- Provide:
+  • feedback: Constructive, actionable feedback on the answer
+  • score: 1-5 (1 = poor, 5 = excellent)
+- Adjust feedback depth based on years of experience:
+  • 0–2 years → focus on learning, basics
+  • 3–5 years → include practical insights and improvement areas
+  • 6+ years → include advanced considerations and system-level advice
+
+Current Date: ${new Date().toUTCString()}
+        `
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          jobRole,
+          yearsOfExperience,
+          questionsAndAnswers
+        })
+      }
+    ];
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.2,
+      messages
+    });
+
+    const rawContent = response.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      throw new Error("Empty response from AI");
+    }
+
+    const cleanedContent = cleanJsonResponse(rawContent);
+
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error("❌ AI returned invalid JSON:\n", cleanedContent);
+      throw new Error("Failed to parse AI JSON response");
+    }
+
+    return parsedResult;
+
+  } catch (error) {
+    console.error("❌ Error generating interview feedback:", error.message);
+    throw error;
+  }
+}
+
+
+
+
+
+
+
 
 
 

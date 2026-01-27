@@ -1,4 +1,4 @@
-import { generateInterviewQuestions } from "../aiagents/QuestionAgent.js";
+import { generateInterviewFeedback, generateInterviewQuestions } from "../aiagents/QuestionAgent.js";
 import db from "../config/db.js";
 
 
@@ -121,7 +121,6 @@ export const getInterviewQuestions = async (req, res) => {
 export const getInterviewDetail = async (req, res) => {
   try {
     const userId = req.user.id;
-    // const userId = 17;
     const { interviewId } = req.params;
 
     if (!interviewId) {
@@ -140,9 +139,11 @@ export const getInterviewDetail = async (req, res) => {
       });
     }
 
-    const [{ count }] = await db("interview_questions")
+    
+    const questions = await db("interview_questions")
+      .select("id", "question", "question_type", "created_at")
       .where({ interview_id: interviewId })
-      .count("id as count");
+      .orderBy("id", "asc");
 
     res.status(200).json({
       message: "Interview details fetched successfully",
@@ -151,7 +152,8 @@ export const getInterviewDetail = async (req, res) => {
         jobRole: interview.job_role,
         experienceLevel: interview.experience_level,
         techStack: JSON.parse(interview.tech_stack),
-        totalQuestions: Number(count),
+        totalQuestions: questions.length, 
+        questions, 
         createdAt: interview.created_at
       }
     });
@@ -163,6 +165,7 @@ export const getInterviewDetail = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -190,6 +193,149 @@ export const getUserInterviews = async (req, res) => {
 
   } catch (error) {
     console.error("Fetch User Interviews Error:", error);
+    res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+};
+
+export const submitInterviewFeedback = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { interviewId } = req.params;
+    const { answers } = req.body;
+
+    console.log("Incoming body:", req.body);
+
+    if (!interviewId || !Array.isArray(answers)) {
+      return res.status(400).json({
+        message: "Interview ID and answers array are required",
+      });
+    }
+
+    const interview = await db("mock_interviews")
+      .where({ id: interviewId, user_id: userId })
+      .first();
+
+    if (!interview) {
+      return res.status(404).json({
+        message: "Interview not found",
+      });
+    }
+
+    const questions = await db("interview_questions")
+      .where({ interview_id: interviewId })
+      .select("id", "question");
+
+    if (!questions.length) {
+      return res.status(400).json({
+        message: "No questions found for this interview",
+      });
+    }
+
+    // ✅ Normalize questions + answers
+    const questionsAndAnswers = questions.map((q) => {
+      const userAnswer = answers.find((a) => a.questionId === q.id);
+      return {
+        questionId: q.id,
+        question: q.question,
+        answer: userAnswer?.answer || "",
+      };
+    });
+
+    // 🔹 Call AI
+    const feedbackResult = await generateInterviewFeedback({
+      jobRole: interview.job_role,
+      yearsOfExperience: interview.experience_level,
+      questionsAndAnswers,
+    });
+
+    /**
+     * EXPECTED AI RESPONSE:
+     * {
+     *   overallScore: number,
+     *   summary: string,
+     *   feedback: [
+     *     { questionId, answer, feedback, score }
+     *   ]
+     * }
+     */
+
+    if (
+      !feedbackResult ||
+      !Array.isArray(feedbackResult.feedback)
+    ) {
+      console.error("Invalid AI feedback:", feedbackResult);
+      return res.status(500).json({
+        message: "Invalid feedback response from AI",
+      });
+    }
+
+    // ✅ FIXED MAP
+    const feedbackRows = feedbackResult.feedback.map((f) => ({
+      interview_id: interviewId,
+      question_id: f.questionId,
+      answer: f.answer || "",
+      feedback: f.feedback,
+      score: f.score,
+    }));
+
+    await db("interview_feedback").insert(feedbackRows);
+
+    return res.status(201).json({
+      message: "Interview feedback generated successfully",
+      overallScore: feedbackResult.overallScore,
+      summary: feedbackResult.summary,
+      strengths: feedbackResult.strengths || [],
+      improvements: feedbackResult.improvements || [],
+      feedback: feedbackResult.feedback,
+    });
+
+  } catch (error) {
+    console.error("Submit Interview Feedback Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+
+export const getInterviewFeedback = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { interviewId } = req.params;
+
+    
+    const interview = await db("mock_interviews")
+      .where({ id: interviewId, user_id: userId })
+      .first();
+
+    if (!interview) {
+      return res.status(404).json({
+        message: "Interview not found"
+      });
+    }
+
+    const feedback = await db("interview_feedback as f")
+      .join("interview_questions as q", "q.id", "f.question_id")
+      .where("f.interview_id", interviewId)
+      .select(
+        "q.question",
+        "f.answer",
+        "f.feedback",
+        "f.score",
+        "f.created_at"
+      )
+      .orderBy("q.id", "asc");
+
+    res.status(200).json({
+      message: "Interview feedback fetched successfully",
+      interviewId,
+      feedback
+    });
+
+  } catch (error) {
+    console.error("Get Interview Feedback Error:", error);
     res.status(500).json({
       message: "Internal server error"
     });
