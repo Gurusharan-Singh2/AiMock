@@ -127,7 +127,6 @@ export const getInterviewDetail = async (req, res) => {
       });
     }
 
-    // Fetch interview
     const interview = await db("mock_interviews")
       .where({ id: interviewId, user_id: userId })
       .first();
@@ -138,18 +137,11 @@ export const getInterviewDetail = async (req, res) => {
       });
     }
 
-    // Fetch questions
+    
     const questions = await db("interview_questions")
       .select("id", "question", "question_type", "created_at")
       .where({ interview_id: interviewId })
       .orderBy("id", "asc");
-
-    // Fetch feedback ID if exists
-    const attempt = await db("mock_interview_attempts")
-      .where({ interview_id: interviewId, user_id: userId })
-      .first();
-
-    const feedbackId = attempt ? attempt.id : null;
 
     res.status(200).json({
       message: "Interview details fetched successfully",
@@ -158,9 +150,8 @@ export const getInterviewDetail = async (req, res) => {
         jobRole: interview.job_role,
         experienceLevel: interview.experience_level,
         techStack: JSON.parse(interview.tech_stack),
-        totalQuestions: questions.length,
-        questions,
-        feedbackId,          // <-- added feedback ID
+        totalQuestions: questions.length, 
+        questions, 
         createdAt: interview.created_at
       }
     });
@@ -178,17 +169,22 @@ export const getInterviewDetail = async (req, res) => {
 
 export const getUserInterviews = async (req, res) => {
   try {
- const userId = req.user.id;
+    const userId = req.user.id;
 
-
-    const interviews = await db("mock_interviews")
-      .where({ user_id: userId })
-      .orderBy("created_at", "desc")
+    // Fetch interviews along with feedback ID if exists
+    const interviews = await db("mock_interviews as m")
+      .leftJoin("mock_interview_attempts as a", function () {
+        this.on("m.id", "=", "a.interview_id")
+            .andOn("a.user_id", "=", db.raw("?", [userId]));
+      })
+      .where("m.user_id", userId)
+      .orderBy("m.created_at", "desc")
       .select(
-        "id",
-        "job_role",
-        "experience_level",
-        "created_at"
+        "m.id",
+        "m.job_role",
+        "m.experience_level",
+        "m.created_at",
+        "a.id as feedbackId" // <-- include feedback ID
       );
 
     res.status(200).json({
