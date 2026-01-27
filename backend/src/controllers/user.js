@@ -131,7 +131,24 @@ export const loginWithPassword = async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = await db("users").where({ email }).first();
+    // const user = await db("users").where({ email }).first();
+    const user = await db("users as u")
+      .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
+      .select(
+        "u.id",
+        "u.name",
+        "u.email",
+        "u.password",
+        "u.isBoarding",
+        "u.created_at",
+        "o.img",
+       
+      )
+      .where("u.email",email )
+      .first(); 
+   
+    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -145,7 +162,7 @@ export const loginWithPassword = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      user: { id: user.id, name: user.name, email: user.email,isBoarding:user.isBoarding },
+      user: { id: user.id, name: user.name, email: user.email,isBoarding:user.isBoarding,img:user.img },
     });
   } catch (error) {
     console.error(error);
@@ -331,10 +348,23 @@ export const onboarding = async (req, res) => {
       .where({ id: userId })
       .update({ isBoarding: true });
 
-    const user = await db("users")
-      .select("id", "name", "email", "isBoarding")
-      .where({ id: userId })
-      .first();
+    // const user = await db("users")
+    //   .select("id", "name", "email", "isBoarding")
+    //   .where({ id: userId })
+    //   .first();
+
+     const user = await db("users as u")
+      .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
+      .select(
+        "u.id",
+        "u.name",
+        "u.email",
+        "u.isBoarding",
+        
+        "o.img",
+      )
+      .where("u.id", userId)
+      .first();   
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -348,6 +378,8 @@ export const onboarding = async (req, res) => {
         name: user.name,
         email: user.email,
         isBoarding: user.isBoarding,
+        img:user.img
+        
       },
     });
 
