@@ -127,6 +127,7 @@ export const getInterviewDetail = async (req, res) => {
       });
     }
 
+    // Fetch interview
     const interview = await db("mock_interviews")
       .where({ id: interviewId, user_id: userId })
       .first();
@@ -137,11 +138,18 @@ export const getInterviewDetail = async (req, res) => {
       });
     }
 
-    
+    // Fetch questions
     const questions = await db("interview_questions")
       .select("id", "question", "question_type", "created_at")
       .where({ interview_id: interviewId })
       .orderBy("id", "asc");
+
+    // Fetch feedback ID if exists
+    const attempt = await db("mock_interview_attempts")
+      .where({ interview_id: interviewId, user_id: userId })
+      .first();
+
+    const feedbackId = attempt ? attempt.id : null;
 
     res.status(200).json({
       message: "Interview details fetched successfully",
@@ -150,8 +158,9 @@ export const getInterviewDetail = async (req, res) => {
         jobRole: interview.job_role,
         experienceLevel: interview.experience_level,
         techStack: JSON.parse(interview.tech_stack),
-        totalQuestions: questions.length, 
-        questions, 
+        totalQuestions: questions.length,
+        questions,
+        feedbackId,          // <-- added feedback ID
         createdAt: interview.created_at
       }
     });
