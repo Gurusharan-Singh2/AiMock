@@ -5,7 +5,6 @@ import db from "../config/db.js";
 export const generateInterview = async (req, res) => {
   try {
     const userId = req.user.id;
-    // const userId = 1;
 
     const {
       jobRole,
@@ -74,7 +73,6 @@ export const generateInterview = async (req, res) => {
 export const getInterviewQuestions = async (req, res) => {
   try {
  const userId = req.user.id;
-    // const userId = 1;    
     const { interviewId } = req.params;
 
     if (!interviewId) {
@@ -173,9 +171,7 @@ export const getUserInterviews = async (req, res) => {
   try {
  const userId = req.user.id;
 
- console.log(userId);
- 
-    // const userId = 1;
+
     const interviews = await db("mock_interviews")
       .where({ user_id: userId })
       .orderBy("created_at", "desc")
@@ -205,7 +201,6 @@ export const submitInterviewFeedback = async (req, res) => {
     const { interviewId } = req.params;
     const { answers } = req.body;
 
-    console.log("Incoming body:", req.body);
 
     if (!interviewId || !Array.isArray(answers)) {
       return res.status(400).json({
@@ -233,7 +228,6 @@ export const submitInterviewFeedback = async (req, res) => {
       });
     }
 
-    // ✅ Normalize questions + answers
     const questionsAndAnswers = questions.map((q) => {
       const userAnswer = answers.find((a) => a.questionId === q.id);
       return {
@@ -243,23 +237,14 @@ export const submitInterviewFeedback = async (req, res) => {
       };
     });
 
-    // 🔹 Call AI
+
     const feedbackResult = await generateInterviewFeedback({
       jobRole: interview.job_role,
       yearsOfExperience: interview.experience_level,
       questionsAndAnswers,
     });
 
-    /**
-     * EXPECTED AI RESPONSE:
-     * {
-     *   overallScore: number,
-     *   summary: string,
-     *   feedback: [
-     *     { questionId, answer, feedback, score }
-     *   ]
-     * }
-     */
+  
 
     if (
       !feedbackResult ||
@@ -271,7 +256,7 @@ export const submitInterviewFeedback = async (req, res) => {
       });
     }
 
-    // ✅ FIXED MAP
+   
     const feedbackRows = feedbackResult.feedback.map((f) => ({
       interview_id: interviewId,
       question_id: f.questionId,

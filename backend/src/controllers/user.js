@@ -296,7 +296,6 @@ export const resetPassword = async (req, res) => {
 export const onboarding = async (req, res) => {
   try {
     const { college_name, year_passing, linkedin_url } = req.body;
-    // const userId = 17;
     const userId = req.user.id;
 
     if (!college_name || !year_passing || !linkedin_url) {
@@ -332,7 +331,6 @@ export const onboarding = async (req, res) => {
       .where({ id: userId })
       .update({ isBoarding: true });
 
-    // ✅ fetch updated user
     const user = await db("users")
       .select("id", "name", "email", "isBoarding")
       .where({ id: userId })
@@ -362,8 +360,8 @@ export const onboarding = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
   try {
-    // const userId = req.user.id;
-    const userId = 17;
+    const userId = req.user.id;
+   
 
     const user = await db("users as u")
       .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
