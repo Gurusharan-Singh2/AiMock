@@ -131,23 +131,22 @@ export const loginWithPassword = async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // const user = await db("users").where({ email }).first();
     const user = await db("users as u")
       .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
       .select(
         "u.id",
         "u.name",
         "u.email",
-        "u.password",
+        "u.password",      
         "u.isBoarding",
         "u.created_at",
         "o.img",
-       
+        "o.college_name",
+        "o.year_passing",
+        "o.linkedin_url"
       )
-      .where("u.email",email )
-      .first(); 
-   
-    
+      .where("u.email", email)
+      .first();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -158,17 +157,22 @@ export const loginWithPassword = async (req, res) => {
       return res.status(401).json({ message: "Incorrect password" });
     }
 
+    
     generateTokenAndSetCookie(res, { id: user.id, email: user.email });
+
+    
+    const { password: _password, ...safeUser } = user;
 
     res.status(200).json({
       message: "Login successful",
-      user: { id: user.id, name: user.name, email: user.email,isBoarding:user.isBoarding,img:user.img },
+      user: safeUser,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 
@@ -420,6 +424,98 @@ export const getUserProfile = async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+import { deleteFromTebi } from "../libs/s3.js";
+
+export const editProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, college_name, year_passing, linkedin_url } = req.body;
+
+   
+    const userExists = await db("users").where({ id: userId }).first();
+    if (!userExists) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (name) {
+      await db("users")
+        .where({ id: userId })
+        .update({ name });
+    }
+
+  
+    let imageUrl;
+    if (req.file) {
+      const existingOnboarding = await db("onboarding")
+        .where({ user_id: userId })
+        .first();
+
+      if (existingOnboarding && existingOnboarding.img) {
+        try {
+          await deleteFromTebi(existingOnboarding.img);
+        } catch (err) {
+          console.warn("Failed to delete previous image:", err.message);
+        }
+      }
+
+      imageUrl = await uploadToTebi(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+    }
+
+    const onboardingExists = await db("onboarding")
+      .where({ user_id: userId })
+      .first();
+
+    if (onboardingExists) {
+      await db("onboarding")
+        .where({ user_id: userId })
+        .update({
+          ...(college_name && { college_name }),
+          ...(year_passing && { year_passing }),
+          ...(linkedin_url && { linkedin_url }),
+          ...(imageUrl && { img: imageUrl }),
+          updated_at: db.fn.now(),
+        });
+    } else if (college_name || year_passing || linkedin_url || imageUrl) {
+      await db("onboarding").insert({
+        user_id: userId,
+        college_name,
+        year_passing,
+        linkedin_url,
+        img: imageUrl,
+      });
+    }
+
+    const updatedUser = await db("users as u")
+      .leftJoin("onboarding as o", "u.id", "=", "o.user_id")
+      .select(
+        "u.id",
+        "u.name",
+        "u.email",
+        "u.isBoarding",
+        "o.img",
+        "o.college_name",
+        "o.year_passing",
+        "o.linkedin_url"
+      )
+      .where("u.id", userId)
+      .first();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Edit profile error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
