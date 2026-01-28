@@ -29,7 +29,8 @@ export const generateInterview = async (req, res) => {
       jobDescription,
       techStack,
       yearsOfExperience,
-      numberOfQuestions
+      numberOfQuestions,
+      entropySeed: Date.now()
     });
 
     if (!aiResult || !aiResult.questions?.length) {
@@ -200,156 +201,7 @@ export const getUserInterviews = async (req, res) => {
   }
 };
 
-// export const submitInterviewFeedback = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const { interviewId } = req.params;
-//     const { answers } = req.body;
 
-//     if (!interviewId || !Array.isArray(answers)) {
-//       return res.status(400).json({
-//         message: "Interview ID and answers array are required",
-//       });
-//     }
-
-//     const interview = await db("mock_interviews")
-//       .where({ id: interviewId, user_id: userId })
-//       .first();
-
-//     if (!interview) {
-//       return res.status(404).json({
-//         message: "Interview not found",
-//       });
-//     }
-
-//     const questions = await db("interview_questions")
-//       .where({ interview_id: interviewId })
-//       .select("id", "question");
-
-//     if (!questions.length) {
-//       return res.status(400).json({
-//         message: "No questions found for this interview",
-//       });
-//     }
-
-//     const questionsAndAnswers = questions.map((q) => {
-//       const userAnswer = answers.find(
-//         (a) => Number(a.questionId) === Number(q.id)
-//       );
-
-//       return {
-//         questionId: q.id,
-//         question: q.question,
-//         answer: userAnswer?.answer || "",
-//       };
-//     });
-
-//     const feedbackResult = await generateInterviewFeedback({
-//       jobRole: interview.job_role,
-//       yearsOfExperience: interview.experience_level,
-//       questionsAndAnswers,
-//     });
-
-//     if (
-//       !feedbackResult ||
-//       !Array.isArray(feedbackResult.feedback)
-//     ) {
-//       console.error("Invalid AI feedback:", feedbackResult);
-//       return res.status(500).json({
-//         message: "Invalid feedback response from AI",
-//       });
-//     }
-
-//     const feedbackPayload = {
-//       overallScore: feedbackResult.overallScore,
-//       summary: feedbackResult.summary,
-//       strengths: feedbackResult.strengths || [],
-//       improvements: feedbackResult.improvements || [],
-//       questions: feedbackResult.feedback, 
-//     };
-
-//     await db.raw(
-//       `
-//       INSERT INTO mock_interview_attempts
-//         (user_id, interview_id, responses, feedback, status)
-//       VALUES (?, ?, ?, ?, 'feedback_generated')
-//       ON DUPLICATE KEY UPDATE
-//         feedback = VALUES(feedback),
-//         status = 'feedback_generated',
-//         updated_at = CURRENT_TIMESTAMP
-//       `,
-//       [
-//         userId,
-//         interviewId,
-//         JSON.stringify(answers),
-//         JSON.stringify(feedbackPayload),
-//       ]
-//     );
-
-//     return res.status(201).json({
-//       message: "Interview feedback generated successfully",
-//       ...feedbackPayload,
-//     });
-
-//   } catch (error) {
-//     console.error("Submit Interview Feedback Error:", error);
-//     return res.status(500).json({
-//       message: "Internal server error",
-//     });
-//   }
-// };
-
-
-
-// export const getInterviewFeedback = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const { interviewId } = req.params;
-
-    
-//     const attempt = await db("mock_interview_attempts")
-//       .where({ user_id: userId, interview_id: interviewId })
-//       .first();
-
-//     if (!attempt) {
-//       return res.status(404).json({
-//         message: "Interview not found"
-//       });
-//     }
-
-    
-//     let feedbackData = null;
-//     try {
-//       feedbackData = attempt.feedback ? JSON.parse(attempt.feedback) : null;
-//     } catch (e) {
-//       console.error("❌ Failed to parse stored feedback JSON:", e);
-//       return res.status(500).json({
-//         message: "Stored feedback is corrupted"
-//       });
-//     }
-
-//     res.status(200).json({
-//       message: "Interview feedback fetched successfully",
-//       interviewId,
-//       overallScore: feedbackData?.overallScore ?? null,
-//       summary: feedbackData?.summary ?? "",
-//       strengths: feedbackData?.strengths ?? [],
-//       improvements: feedbackData?.improvements ?? [],
-//       questions: feedbackData?.questions ?? [] 
-//     });
-
-//   } catch (error) {
-//     console.error("Get Interview Feedback Error:", error);
-//     res.status(500).json({
-//       message: "Internal server error"
-//     });
-//   }
-// };
-
-
-
-
-// controllers/interviewFeedbackController.js
 export const submitInterviewFeedback = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -375,6 +227,8 @@ export const submitInterviewFeedback = async (req, res) => {
     if (!questions.length) {
       return res.status(400).json({ message: "No questions found for this interview" });
     }
+   
+    
 
     const questionsAndAnswers = questions.map(q => {
       const userAnswer = answers.find(a => Number(a.questionId) === Number(q.id));
@@ -391,6 +245,9 @@ export const submitInterviewFeedback = async (req, res) => {
       questionsAndAnswers
     });
 
+    
+    
+
     if (!feedbackResult || !Array.isArray(feedbackResult.feedback)) {
       console.error("Invalid AI feedback:", feedbackResult);
       return res.status(500).json({ message: "Invalid feedback response from AI" });
@@ -401,7 +258,7 @@ export const submitInterviewFeedback = async (req, res) => {
       summary: feedbackResult.summary || "",
       strengths: feedbackResult.strengths || [],
       improvements: feedbackResult.improvements || [],
-      questions: feedbackResult.feedback // contains userAnswer + correctAnswer + feedback + score
+      questions: feedbackResult.feedback 
     };
 
     await db.raw(
@@ -449,6 +306,9 @@ export const getInterviewFeedback = async (req, res) => {
       return res.status(500).json({ message: "Stored feedback is corrupted" });
     }
 
+    
+    
+
     res.status(200).json({
       message: "Interview feedback fetched successfully",
       interviewId,
@@ -456,7 +316,7 @@ export const getInterviewFeedback = async (req, res) => {
       summary: feedbackData?.summary ?? "",
       strengths: feedbackData?.strengths ?? [],
       improvements: feedbackData?.improvements ?? [],
-      questions: feedbackData?.questions ?? [] // includes userAnswer + correctAnswer + feedback + score
+      questions: feedbackData?.questions ?? [] 
     });
 
   } catch (error) {
