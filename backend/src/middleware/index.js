@@ -4,15 +4,20 @@ import db from "../config/db.js";
 export const authMiddleware = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
+    console.log("token in middleware",token);
+    
 
     if (!token)
       return res.status(401).json({ message: "Unauthorized: Token not found" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+
     const user = await db("users")
       .where({ id: decoded.id })
       .first(["id", "name", "email"]);
+      console.log("User in middleware",user);
+      
 
     if (!user)
       return res.status(401).json({ message: "Unauthorized: User not found" });
