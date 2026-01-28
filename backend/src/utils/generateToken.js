@@ -6,7 +6,7 @@ export const generateTokenAndSetCookie = (res, payload, expiresIn = "40d") => {
   res.cookie("token", token, {
     httpOnly: true,     
     secure: process.env.NODE_ENV === "production", 
-    sameSite: "strict",  
+    sameSite: "none",  
     maxAge: 40 * 24 * 60 * 60 * 1000, 
   });
 
