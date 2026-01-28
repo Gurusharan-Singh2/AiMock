@@ -4,7 +4,7 @@ import db from "../config/db.js";
 export const authMiddleware = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
-    console.log("token in middleware",token);
+    
     
 
     if (!token)
@@ -16,7 +16,7 @@ export const authMiddleware = async (req, res, next) => {
     const user = await db("users")
       .where({ id: decoded.id })
       .first(["id", "name", "email"]);
-      console.log("User in middleware",user);
+    
       
 
     if (!user)
