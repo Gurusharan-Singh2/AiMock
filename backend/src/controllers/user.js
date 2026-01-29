@@ -470,6 +470,8 @@ export const editProfile = async (req, res) => {
         req.file.originalname,
         req.file.mimetype
       );
+      console.log(imageUrl);
+      
     }
 
     const onboardingExists = await db("onboarding")
@@ -483,8 +485,7 @@ export const editProfile = async (req, res) => {
           ...(college_name && { college_name }),
           ...(year_passing && { year_passing }),
           ...(linkedin_url && { linkedin_url }),
-          ...(imageUrl && { img: imageUrl }),
-          updated_at: db.fn.now(),
+           ...(imageUrl && { img: imageUrl })
         });
     } else if (college_name || year_passing || linkedin_url || imageUrl) {
       await db("onboarding").insert({
