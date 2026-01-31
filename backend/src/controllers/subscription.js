@@ -10,7 +10,7 @@ export const Subscription = async (req, res) => {
     });
 
     const options = {
-      amount: req.body.amount * 100, // amount in paise
+      amount: req.body.amount * 100, 
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
