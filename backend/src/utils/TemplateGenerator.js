@@ -254,3 +254,282 @@ export const generateForgotPasswordTemplate = (otp, name) => `
 </body>
 </html>
 `;
+
+
+export const generateContactUsTemplate = ({ name, email, message }) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>New Contact Message | CountryEdu</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #eef2f7;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #111827;
+    }
+
+    .wrapper {
+      padding: 48px 16px;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.12);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0f766e, #115e59);
+      padding: 40px 24px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 42px 36px;
+    }
+
+    .section {
+      margin-bottom: 26px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .email {
+      color: #0f766e;
+      text-decoration: none;
+    }
+
+    .message-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 5px solid #0f766e;
+      padding: 22px;
+      border-radius: 14px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #374151;
+      white-space: pre-line;
+    }
+
+    .footer {
+      background: #f9fafb;
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    @media (max-width: 600px) {
+      .content {
+        padding: 30px 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+
+      <div class="header">
+        <div class="badge">New Message</div>
+        <h1>Contact Form Submission</h1>
+      </div>
+
+      <div class="content">
+
+        <div class="section">
+          <div class="label">Sender Name</div>
+          <div class="value">${name}</div>
+        </div>
+
+        <div class="section">
+          <div class="label">Sender Email</div>
+          <div class="value">
+            <a href="mailto:${email}" class="email">${email}</a>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">Message</div>
+          <div class="message-box">
+            ${message}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer">
+        © ${new Date().getFullYear()} CountryEdu · Admin Notification
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+
+export const generateContactAutoReplyTemplate = (name) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thank You for Contacting CountryEdu</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f3f4f6;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1f2937;
+    }
+
+    .wrapper {
+      padding: 40px 16px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      padding: 36px 20px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .content {
+      padding: 38px 30px;
+    }
+
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #4b5563;
+      margin-bottom: 22px;
+    }
+
+    .highlight {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #1e3a8a;
+      line-height: 1.6;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+      background-color: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    @media (max-width: 600px) {
+      .content {
+        padding: 28px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+
+      <div class="header">
+        <h1>CountryEdu</h1>
+      </div>
+
+      <div class="content">
+        <p class="greeting">Hello ${name},</p>
+
+        <p class="text">
+          Thank you for reaching out to <strong>CountryEdu</strong>!  
+          We’ve successfully received your message and our support team will review it shortly.
+        </p>
+
+        <p class="text">
+          We typically respond within <strong>24–48 hours</strong>. If your inquiry is urgent,
+          please include additional details when replying to this email.
+        </p>
+
+        <div class="highlight">
+          💡 <strong>What’s next?</strong><br/>
+          Our team will carefully review your message and get back to you as soon as possible.
+        </div>
+      </div>
+
+      <div class="footer">
+        © ${new Date().getFullYear()} CountryEdu — All Rights Reserved<br/>
+        Need help? Contact us at
+        <a href="mailto:support@countryedu.com" style="color:#2563eb;text-decoration:none;">
+          support@countryedu.com
+        </a>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
+`;

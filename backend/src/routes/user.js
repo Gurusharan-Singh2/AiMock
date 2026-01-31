@@ -17,7 +17,7 @@ router.post("/forgot-password/verify-otp", verifyForgotPasswordOtp);
 router.post("/forgot-password/reset", resetPassword);
 
 router.post("/onboarding",authMiddleware,upload.single("img"),onboarding);
-router.get("/profile",authMiddleware,getUserProfile)
+router.get("/profile",authMiddleware,getUserProfile);
 
 
 

@@ -9,6 +9,7 @@ import UserRouter from './routes/user.js'
 import InterviewRouter from './routes/interview.js'
 import ContactRouter from './routes/contact.js'
 import SubscriptionRouter from './routes/subscription.js'
+import AdminRouter from './routes/admin.routes.js'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +63,7 @@ app.post("/api/v1/logout", (req, res) => {
   res.json({ message: "Logged out successfully" });
 });
 app.use("/api/v1/subscription",SubscriptionRouter)
-
+app.use("/api/v1/admin",AdminRouter)
 
 
 app.listen(Port,()=>{
