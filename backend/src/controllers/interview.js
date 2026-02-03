@@ -1,7 +1,6 @@
 import { generateInterviewFeedback, generateInterviewQuestions } from "../aiagents/QuestionAgent.js";
 import db from "../config/db.js";
 
-
 export const generateInterview = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -14,16 +13,30 @@ export const generateInterview = async (req, res) => {
       numberOfQuestions = 5
     } = req.body;
 
-
     if (!jobRole || !techStack || !yearsOfExperience) {
       return res.status(400).json({
         message: "jobRole, techStack, and yearsOfExperience are required"
       });
     }
-     
+
+   
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const MONTHLY_LIMIT = 10; 
+
+    const monthlyStat = await db("user_monthly_interview_stats")
+      .where({ user_id: userId, year, month })
+      .first();
+
+    if ((monthlyStat?.interview_count || 0) >= MONTHLY_LIMIT) {
+      return res.status(403).json({
+        message: "Monthly interview limit reached"
+      });
+    };
 
 
-  
     const aiResult = await generateInterviewQuestions({
       jobRole,
       jobDescription,
@@ -39,7 +52,7 @@ export const generateInterview = async (req, res) => {
       });
     }
 
-    
+   
     const [interviewId] = await db("mock_interviews").insert({
       user_id: userId,
       job_role: jobRole,
@@ -47,7 +60,6 @@ export const generateInterview = async (req, res) => {
       tech_stack: JSON.stringify(techStack)
     });
 
-    
     const questionRows = aiResult.questions.map(q => ({
       interview_id: interviewId,
       question_type: q.type,
@@ -56,6 +68,7 @@ export const generateInterview = async (req, res) => {
 
     await db("interview_questions").insert(questionRows);
 
+ 
     res.status(201).json({
       message: "Interview questions generated successfully",
       interviewId,
@@ -69,6 +82,7 @@ export const generateInterview = async (req, res) => {
     });
   }
 };
+
 
 
 export const getInterviewQuestions = async (req, res) => {
@@ -209,9 +223,28 @@ export const submitInterviewFeedback = async (req, res) => {
     const { answers } = req.body;
 
     if (!interviewId || !Array.isArray(answers)) {
-      return res.status(400).json({ message: "Interview ID and answers array are required" });
+      return res.status(400).json({
+        message: "Interview ID and answers array are required"
+      });
     }
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const MONTHLY_LIMIT = 10; 
+
+    const monthlyStat = await db("user_monthly_interview_stats")
+      .where({ user_id: userId, year, month })
+      .first();
+
+    if ((monthlyStat?.interview_count || 0) >= MONTHLY_LIMIT) {
+      return res.status(403).json({
+        message: "Monthly interview limit reached"
+      });
+    }
+
+    
     const interview = await db("mock_interviews")
       .where({ id: interviewId, user_id: userId })
       .first();
@@ -225,13 +258,16 @@ export const submitInterviewFeedback = async (req, res) => {
       .select("id", "question");
 
     if (!questions.length) {
-      return res.status(400).json({ message: "No questions found for this interview" });
+      return res.status(400).json({
+        message: "No questions found for this interview"
+      });
     }
-   
-    
 
     const questionsAndAnswers = questions.map(q => {
-      const userAnswer = answers.find(a => Number(a.questionId) === Number(q.id));
+      const userAnswer = answers.find(
+        a => Number(a.questionId) === Number(q.id)
+      );
+
       return {
         questionId: q.id,
         question: q.question,
@@ -239,18 +275,18 @@ export const submitInterviewFeedback = async (req, res) => {
       };
     });
 
+  
     const feedbackResult = await generateInterviewFeedback({
       jobRole: interview.job_role,
       yearsOfExperience: interview.experience_level,
       questionsAndAnswers
     });
 
-    
-    
-
     if (!feedbackResult || !Array.isArray(feedbackResult.feedback)) {
       console.error("Invalid AI feedback:", feedbackResult);
-      return res.status(500).json({ message: "Invalid feedback response from AI" });
+      return res.status(500).json({
+        message: "Invalid feedback response from AI"
+      });
     }
 
     const feedbackPayload = {
@@ -258,9 +294,10 @@ export const submitInterviewFeedback = async (req, res) => {
       summary: feedbackResult.summary || "",
       strengths: feedbackResult.strengths || [],
       improvements: feedbackResult.improvements || [],
-      questions: feedbackResult.feedback 
+      questions: feedbackResult.feedback
     };
 
+   
     await db.raw(
       `
       INSERT INTO mock_interview_attempts
@@ -271,7 +308,24 @@ export const submitInterviewFeedback = async (req, res) => {
         status = 'feedback_generated',
         updated_at = CURRENT_TIMESTAMP
       `,
-      [userId, interviewId, JSON.stringify(answers), JSON.stringify(feedbackPayload)]
+      [
+        userId,
+        interviewId,
+        JSON.stringify(answers),
+        JSON.stringify(feedbackPayload)
+      ]
+    );
+
+    await db.raw(
+      `
+      INSERT INTO user_monthly_interview_stats
+        (user_id, year, month, interview_count)
+      VALUES (?, ?, ?, 1)
+      ON DUPLICATE KEY UPDATE
+        interview_count = interview_count + 1,
+        updated_at = CURRENT_TIMESTAMP
+      `,
+      [userId, year, month]
     );
 
     return res.status(201).json({
@@ -281,9 +335,12 @@ export const submitInterviewFeedback = async (req, res) => {
 
   } catch (error) {
     console.error("Submit Interview Feedback Error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      message: "Internal server error"
+    });
   }
 };
+
 
 export const getInterviewFeedback = async (req, res) => {
   try {
@@ -322,6 +379,50 @@ export const getInterviewFeedback = async (req, res) => {
   } catch (error) {
     console.error("Get Interview Feedback Error:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
+export const getRemainingInterviewLimit = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const subscription = await db("user_subscriptions as us")
+      .join("subscriptions as s", "us.subscription_id", "s.id")
+      .where("us.user_id", userId)
+      .select("s.monthly_interview_limit")
+      .first();
+
+    const limit = subscription?.monthly_interview_limit ?? 10; // FREE PLAN
+
+  
+    const stat = await db("user_monthly_interview_stats")
+      .where({ user_id: userId, year, month })
+      .first();
+
+    const used = stat?.interview_count || 0;
+    const remaining = Math.max(limit - used, 0);
+
+    
+    res.status(200).json({
+      year,
+      month,
+      limit,
+      used,
+      remaining,
+      isLimitReached: remaining === 0
+    });
+
+  } catch (error) {
+    console.error("Remaining Interview Limit Error:", error);
+    res.status(500).json({
+      message: "Internal server error"
+    });
   }
 };
 

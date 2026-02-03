@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import Razorpay from 'razorpay';
 import db from "../config/db.js";
 export const Subscription = async (req, res) => {
-    console.log("subscription")
+    
     try {
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
