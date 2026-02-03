@@ -4,6 +4,7 @@ import {
   getInterviewDetail,
   getInterviewFeedback,
   getInterviewQuestions,
+  getRemainingInterviewLimit,
   getUserInterviews,
   submitInterviewFeedback
 } from "../controllers/interview.js";
@@ -21,7 +22,7 @@ router.get("/", authMiddleware, getUserInterviews);
 
 router.post("/:interviewId/feedback", authMiddleware, submitInterviewFeedback);
 
-
+router.get("/interview/limit" ,authMiddleware , getRemainingInterviewLimit)
 router.get("/:interviewId/feedback", authMiddleware, getInterviewFeedback);
 
 export default router;
