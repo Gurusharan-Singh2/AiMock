@@ -2,6 +2,7 @@ import express from 'express'
 import { editProfile, forgotPasswordSendOtp, getUserProfile, loginWithPassword, onboarding, registerUser, resendForgotPasswordOtp, resendSignupOtp, resetPassword, signupVerifyOtp, verifyForgotPasswordOtp } from '../controllers/user.js';
 import { authMiddleware } from '../middleware/index.js';
 import { upload } from '../libs/s3.js';
+import { getRemainingInterviewLimit } from '../controllers/interview.js';
 
 const router=express.Router();
 
@@ -18,6 +19,8 @@ router.post("/forgot-password/reset", resetPassword);
 
 router.post("/onboarding",authMiddleware,upload.single("img"),onboarding);
 router.get("/profile",authMiddleware,getUserProfile);
+router.get("/interview-limit",authMiddleware,getRemainingInterviewLimit);
+
 
 
 

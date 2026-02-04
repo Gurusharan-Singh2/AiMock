@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import Razorpay from "razorpay";
 import db from "../config/db.js";
+import instance from "../libs/razorpay.js";
 
 
 export const createSubscriptionOrder = async (req, res) => {
@@ -28,22 +28,16 @@ export const createSubscriptionOrder = async (req, res) => {
     }
 
    
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
+  
 
     
-    const order = await razorpay.orders.create({
+    const order = await instance.orders.create({
       amount: plan.price * 100, 
       currency: "INR",
       receipt: `sub_${Date.now()}`,
       notes: {
         user_id,
         subscription_id,
-        environment: process.env.RAZORPAY_KEY_ID?.startsWith("rzp_test_")
-          ? "test"
-          : "live",
       },
     });
 

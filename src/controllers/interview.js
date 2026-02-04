@@ -393,12 +393,12 @@ export const getRemainingInterviewLimit = async (req, res) => {
     const month = now.getMonth() + 1;
 
     const subscription = await db("user_subscriptions as us")
-      .join("subscriptions as s", "us.subscription_id", "s.id")
+      .join("subscriptions as s", "us.subscription_id", "s.subscription_id")
       .where("us.user_id", userId)
-      .select("s.monthly_interview_limit")
+      .select("s.Monthly_limit")
       .first();
 
-    const limit = subscription?.monthly_interview_limit ?? 10; // FREE PLAN
+    const limit = subscription?.Monthly_limit ?? 2; 
 
   
     const stat = await db("user_monthly_interview_stats")
