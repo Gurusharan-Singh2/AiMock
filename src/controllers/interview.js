@@ -1,87 +1,73 @@
 import { generateInterviewFeedback, generateInterviewQuestions } from "../aiagents/QuestionAgent.js";
 import db from "../config/db.js";
+import { getActiveSubscription } from "../helpers/subscription.js";
 
 export const generateInterview = async (req, res) => {
   try {
     const userId = req.user.id;
-
-    const {
-      jobRole,
-      jobDescription,
-      techStack,
-      yearsOfExperience,
-      numberOfQuestions = 5
-    } = req.body;
+    const { jobRole, jobDescription, techStack, yearsOfExperience } = req.body;
 
     if (!jobRole || !techStack || !yearsOfExperience) {
-      return res.status(400).json({
-        message: "jobRole, techStack, and yearsOfExperience are required"
-      });
+      return res.status(400).json({ message: "Missing fields" });
     }
 
-   
+    const subscription = await getActiveSubscription(userId);
+    if (!subscription) {
+      return res.status(403).json({ message: "No active subscription" });
+    }
+
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    const MONTHLY_LIMIT = 10; 
-
-    const monthlyStat = await db("user_monthly_interview_stats")
-      .where({ user_id: userId, year, month })
+    const usage = await db("user_monthly_interview_stats")
+      .where({
+        user_id: userId,
+        subscription_instance_id: subscription.subscriptionInstanceId,
+        year,
+        month,
+      })
       .first();
 
-    if ((monthlyStat?.interview_count || 0) >= MONTHLY_LIMIT) {
-      return res.status(403).json({
-        message: "Monthly interview limit reached"
-      });
-    };
+    const used = usage?.interview_count || 0;
 
+    if (used >= subscription.Monthly_limit) {
+      return res.status(403).json({ message: "Interview limit reached" });
+    }
 
     const aiResult = await generateInterviewQuestions({
       jobRole,
       jobDescription,
       techStack,
       yearsOfExperience,
-      numberOfQuestions,
-      entropySeed: Date.now()
+      entropySeed: Date.now(),
     });
 
-    if (!aiResult || !aiResult.questions?.length) {
-      return res.status(500).json({
-        message: "Failed to generate interview questions"
-      });
-    }
-
-   
     const [interviewId] = await db("mock_interviews").insert({
       user_id: userId,
       job_role: jobRole,
       experience_level: yearsOfExperience,
-      tech_stack: JSON.stringify(techStack)
+      tech_stack: JSON.stringify(techStack),
     });
 
-    const questionRows = aiResult.questions.map(q => ({
-      interview_id: interviewId,
-      question_type: q.type,
-      question: q.question
-    }));
+    await db("interview_questions").insert(
+      aiResult.questions.map((q) => ({
+        interview_id: interviewId,
+        question_type: q.type,
+        question: q.question,
+      }))
+    );
 
-    await db("interview_questions").insert(questionRows);
-
- 
-    res.status(201).json({
-      message: "Interview questions generated successfully",
+    return res.status(201).json({
       interviewId,
-      questions: aiResult.questions
+      questions: aiResult.questions,
     });
-
-  } catch (error) {
-    console.error("Generate Interview Error:", error);
-    res.status(500).json({
-      message: "Internal server error"
-    });
+  } catch (err) {
+    console.error("❌ generateInterview:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 
@@ -186,7 +172,7 @@ export const getUserInterviews = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Fetch interviews along with feedback ID if exists
+    
     const interviews = await db("mock_interviews as m")
       .leftJoin("mock_interview_attempts as a", function () {
         this.on("m.id", "=", "a.interview_id")
@@ -199,7 +185,7 @@ export const getUserInterviews = async (req, res) => {
         "m.job_role",
         "m.experience_level",
         "m.created_at",
-        "a.id as feedbackId" // <-- include feedback ID
+        "a.id as feedbackId" 
       );
 
     res.status(200).json({
@@ -215,36 +201,21 @@ export const getUserInterviews = async (req, res) => {
   }
 };
 
-
 export const submitInterviewFeedback = async (req, res) => {
   try {
     const userId = req.user.id;
     const { interviewId } = req.params;
     const { answers } = req.body;
 
-    if (!interviewId || !Array.isArray(answers)) {
-      return res.status(400).json({
-        message: "Interview ID and answers array are required"
-      });
+    if (!Array.isArray(answers)) {
+      return res.status(400).json({ message: "Answers array is required" });
     }
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-
-    const MONTHLY_LIMIT = 10; 
-
-    const monthlyStat = await db("user_monthly_interview_stats")
-      .where({ user_id: userId, year, month })
-      .first();
-
-    if ((monthlyStat?.interview_count || 0) >= MONTHLY_LIMIT) {
-      return res.status(403).json({
-        message: "Monthly interview limit reached"
-      });
+    const subscription = await getActiveSubscription(userId);
+    if (!subscription) {
+      return res.status(403).json({ message: "No active subscription" });
     }
 
-    
     const interview = await db("mock_interviews")
       .where({ id: interviewId, user_id: userId })
       .first();
@@ -257,47 +228,21 @@ export const submitInterviewFeedback = async (req, res) => {
       .where({ interview_id: interviewId })
       .select("id", "question");
 
-    if (!questions.length) {
-      return res.status(400).json({
-        message: "No questions found for this interview"
-      });
-    }
-
-    const questionsAndAnswers = questions.map(q => {
-      const userAnswer = answers.find(
-        a => Number(a.questionId) === Number(q.id)
-      );
-
+    const questionsAndAnswers = questions.map((q) => {
+      const ua = answers.find((a) => Number(a.questionId) === q.id);
       return {
         questionId: q.id,
         question: q.question,
-        answer: userAnswer?.answer || ""
+        answer: ua?.answer || "",
       };
     });
 
-  
     const feedbackResult = await generateInterviewFeedback({
       jobRole: interview.job_role,
       yearsOfExperience: interview.experience_level,
-      questionsAndAnswers
+      questionsAndAnswers,
     });
 
-    if (!feedbackResult || !Array.isArray(feedbackResult.feedback)) {
-      console.error("Invalid AI feedback:", feedbackResult);
-      return res.status(500).json({
-        message: "Invalid feedback response from AI"
-      });
-    }
-
-    const feedbackPayload = {
-      overallScore: feedbackResult.overallScore,
-      summary: feedbackResult.summary || "",
-      strengths: feedbackResult.strengths || [],
-      improvements: feedbackResult.improvements || [],
-      questions: feedbackResult.feedback
-    };
-
-   
     await db.raw(
       `
       INSERT INTO mock_interview_attempts
@@ -312,32 +257,38 @@ export const submitInterviewFeedback = async (req, res) => {
         userId,
         interviewId,
         JSON.stringify(answers),
-        JSON.stringify(feedbackPayload)
+        JSON.stringify(feedbackResult),
       ]
     );
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
 
     await db.raw(
       `
       INSERT INTO user_monthly_interview_stats
-        (user_id, year, month, interview_count)
-      VALUES (?, ?, ?, 1)
+        (user_id, subscription_instance_id, year, month, interview_count)
+      VALUES (?, ?, ?, ?, 1)
       ON DUPLICATE KEY UPDATE
         interview_count = interview_count + 1,
         updated_at = CURRENT_TIMESTAMP
       `,
-      [userId, year, month]
+      [
+        userId,
+        subscription.subscriptionInstanceId,
+        year,
+        month,
+      ]
     );
 
     return res.status(201).json({
       message: "Interview feedback generated successfully",
-      ...feedbackPayload
+      ...feedbackResult,
     });
-
-  } catch (error) {
-    console.error("Submit Interview Feedback Error:", error);
-    return res.status(500).json({
-      message: "Internal server error"
-    });
+  } catch (err) {
+    console.error("❌ submitInterviewFeedback:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -355,75 +306,92 @@ export const getInterviewFeedback = async (req, res) => {
       return res.status(404).json({ message: "Interview not found" });
     }
 
-    let feedbackData = null;
+    if (attempt.status !== "feedback_generated") {
+      return res.status(400).json({
+        message: "Feedback not generated yet",
+        status: attempt.status,
+      });
+    }
+
+    let feedbackData;
     try {
-      feedbackData = attempt.feedback ? JSON.parse(attempt.feedback) : null;
-    } catch (e) {
-      console.error("❌ Failed to parse stored feedback JSON:", e);
-      return res.status(500).json({ message: "Stored feedback is corrupted" });
+      feedbackData = JSON.parse(attempt.feedback);
+    } catch (err) {
+      console.error("❌ JSON parse error:", err);
+      return res.status(500).json({ message: "Corrupted feedback data" });
     }
 
     
-    
+    const questions = Array.isArray(feedbackData.feedback)
+      ? feedbackData.feedback
+      : [];
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       message: "Interview feedback fetched successfully",
       interviewId,
-      overallScore: feedbackData?.overallScore ?? null,
-      summary: feedbackData?.summary ?? "",
-      strengths: feedbackData?.strengths ?? [],
-      improvements: feedbackData?.improvements ?? [],
-      questions: feedbackData?.questions ?? [] 
+      overallScore: feedbackData.overallScore ?? 0,
+      summary: feedbackData.summary ?? "",
+      strengths: feedbackData.strengths ?? [],
+      improvements: feedbackData.improvements ?? [],
+      questions: questions.map(q => ({
+        questionId: q.questionId,
+        question: q.question,
+        userAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+        feedback: q.feedback,
+        score: q.score,
+      })),
     });
 
   } catch (error) {
-    console.error("Get Interview Feedback Error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("❌ Get Interview Feedback Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 
 export const getRemainingInterviewLimit = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    const subscription = await getActiveSubscription(userId);
+    if (!subscription) {
+      return res.json({
+        limit: 0,
+        used: 0,
+        remaining: 0,
+        isLimitReached: true,
+        reason: "No active subscription",
+      });
+    }
+
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    const subscription = await db("user_subscriptions as us")
-      .join("subscriptions as s", "us.subscription_id", "s.subscription_id")
-      .where("us.user_id", userId)
-      .select("s.Monthly_limit")
-      .first();
-
-    const limit = subscription?.Monthly_limit ?? 2; 
-
-  
     const stat = await db("user_monthly_interview_stats")
-      .where({ user_id: userId, year, month })
+      .where({
+        user_id: userId,
+        subscription_instance_id: subscription.subscriptionInstanceId,
+        year,
+        month,
+      })
       .first();
 
     const used = stat?.interview_count || 0;
+    const limit = Number(subscription.Monthly_limit);
     const remaining = Math.max(limit - used, 0);
 
-    
-    res.status(200).json({
-      year,
-      month,
+    return res.json({
       limit,
       used,
       remaining,
-      isLimitReached: remaining === 0
+      isLimitReached: remaining === 0,
     });
-
   } catch (error) {
-    console.error("Remaining Interview Limit Error:", error);
-    res.status(500).json({
-      message: "Internal server error"
-    });
+    console.error("❌ getRemainingInterviewLimit:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 

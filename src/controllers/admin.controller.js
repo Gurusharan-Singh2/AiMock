@@ -5,13 +5,11 @@ import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 
 export const createAdmin = async (req, res) => {
   try {
-    
+    const { name, email, password } = req.body;
 
-    const { email, password } = req.body;
-
-    if (!email || !password) {
+    if (!name || !email || !password) {
       return res.status(400).json({
-        message: "Email and password are required",
+        message: "Name, email and password are required",
       });
     }
 
@@ -23,6 +21,7 @@ export const createAdmin = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db("admins").insert({
+      name,
       email,
       password_hash: hashedPassword,
       role: "admin",
@@ -37,6 +36,7 @@ export const createAdmin = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 export const createAdminByAdmin = async (req, res) => {
   try {
     if (req.admin.role !== "super_admin") {
@@ -45,11 +45,11 @@ export const createAdminByAdmin = async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!email || !password) {
+    if (!name || !email || !password) {
       return res.status(400).json({
-        message: "Email and password are required",
+        message: "Name, email and password are required",
       });
     }
 
@@ -61,6 +61,7 @@ export const createAdminByAdmin = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db("admins").insert({
+      name,
       email,
       password_hash: hashedPassword,
       role: "admin",
@@ -80,8 +81,6 @@ export const createAdminByAdmin = async (req, res) => {
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body);
-    
 
     if (!email || !password) {
       return res.status(400).json({
@@ -91,7 +90,7 @@ export const adminLogin = async (req, res) => {
 
     const admin = await db("admins")
       .where({ email })
-      .first(["id", "email", "password_hash", "role"]);
+      .first(["id", "name", "email", "password_hash", "role"]);
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -104,6 +103,7 @@ export const adminLogin = async (req, res) => {
 
     generateTokenAndSetCookie(res, {
       id: admin.id,
+      name: admin.name,
       email: admin.email,
       role: admin.role,
     });
@@ -113,6 +113,7 @@ export const adminLogin = async (req, res) => {
       message: "Admin login successful",
       admin: {
         id: admin.id,
+        name: admin.name,
         email: admin.email,
         role: admin.role,
       },
@@ -124,6 +125,7 @@ export const adminLogin = async (req, res) => {
 };
 
 
+
 export const adminLogout = async (req, res) => {
   res.clearCookie("token");
   res.status(200).json({ message: "Admin logged out successfully" });
@@ -133,7 +135,7 @@ export const adminLogout = async (req, res) => {
 export const getAllAdmins = async (req, res) => {
   try {
     const admins = await db("admins")
-      .select("id", "email", "role", "created_at")
+      .select("id", "name", "email", "role", "created_at")
       .orderBy("created_at", "desc");
 
     res.status(200).json({
@@ -145,6 +147,7 @@ export const getAllAdmins = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const deleteAdmin = async (req, res) => {
   try {
