@@ -6,6 +6,7 @@ import {
   getAllAdmins,
   deleteAdmin,
   createAdmin,
+  getAllUser,
 } from "../controllers/admin.controller.js";
 import { adminAuth } from "../middleware/index.js";
 
@@ -19,4 +20,5 @@ router.post("/create", adminAuth, createAdminByAdmin);
 router.get("/list", adminAuth, getAllAdmins);
 router.delete("/:adminId", adminAuth, deleteAdmin);
 
+router.get("/allUser",getAllUser)
 export default router;
