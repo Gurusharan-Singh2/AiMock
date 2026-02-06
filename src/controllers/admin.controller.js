@@ -182,3 +182,46 @@ export const deleteAdmin = async (req, res) => {
   }
 };
 
+export const getAllUser = async (req, res) => {
+  try {
+    const allUser = await db("users as u")
+      .leftJoin(
+        "user_monthly_interview_stats as ums",
+        "u.id",
+        "ums.user_id"
+      )
+      .leftJoin(
+        "user_subscriptions as us",
+        "u.id",
+        "us.user_id"
+      )
+      .leftJoin(
+        "subscriptions as s",
+        "us.subscription_id",
+        "s.subscription_id"
+      )
+      .select(
+        "u.id",
+        "u.email",
+        "u.name",
+        "u.created_at",
+        db.raw("COALESCE(SUM(ums.interview_count), 0) as interview_attempts"),
+        "s.name as subscription_name"
+      )
+      .groupBy(
+        "u.id",
+        "u.email",
+        "u.created_at",
+        "s.name"
+      )
+      .orderBy("u.created_at", "desc");
+
+    res.status(200).json({
+      success: true,
+      allUser,
+    });
+  } catch (error) {
+    console.error("Get all user admin error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
